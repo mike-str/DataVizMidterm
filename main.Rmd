@@ -1,0 +1,230 @@
+---
+title: "Data Viz Midterm Project"
+author: "Michael Strohmeier"
+date: "2025-03-31"
+output: pdf_document
+---
+
+```{r}
+if (!requireNamespace("ggplot2", quietly=TRUE)) {
+  install.packages("ggplot2")
+}
+
+if (!requireNamespace("dplyr", quietly=TRUE)) {
+  install.packages("dplyr")
+}
+
+if (!requireNamespace("tidyr", quietly=TRUE)) {
+  install.packages("tidyr")
+}
+
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(stringr)
+```
+
+```{r}
+df <- read.csv("FirstGenPokemon.csv")
+
+df <- df %>%
+  mutate(
+    Type1 = str_to_title(Type1),
+    Type2 = str_to_title(Type2)
+  )
+
+head(df, 2)
+```
+
+```{r}
+unique_type_list <- unique(df$Type1)
+
+type_colors <- setNames(
+  c(
+  "#4DAF4A",  # grass (green)
+  "#E41A1C",  # fire (red)
+  "#377EB8",  # water (blue)
+  "#A6CE39",  # bug (yellow-green)
+  "#AAAAAA",  # normal (gray)
+  "#800080",  # poison (purple)
+  "#FFD700",  # electric (gold)
+  "#D2B48C",  # ground (tan)
+  "#FF7F00",  # fighting (orange)
+  "#F4A7B9",  # psychic (pink-orange)
+  "#888888",  # rock (dark gray)
+  "#984EA3",  # ghost (dark purple)
+  "#56B4E9",  # ice (light blue)
+  "#8DA0CB"   # dragon (blue-violet)
+  ), 
+  unique_type_list
+)
+
+# Sort by count
+df_sorted <- df %>%
+  count(Type1) %>%
+  arrange(n)
+
+# Plot using sorted factor levels
+ggplot(df, aes(x = factor(Type1, levels = df_sorted$Type1), fill = Type1)) +
+  geom_bar() +
+  scale_fill_manual(values = type_colors) +
+  scale_y_continuous(
+    breaks = seq(0, 31, by = 10),
+    limits = c(0, 31),
+    expand = c(0, 0)) +
+  theme_classic() +
+  labs(
+    title = "Distribution of Primary Type",
+    subtitle = "Pok\u00e9mon Primary Types",
+    x = NULL,
+    y = "Count"  # Removes y-axis label
+  ) +
+  theme(legend.position = "none") +
+  coord_flip()
+```
+
+```{r}
+ggplot(df, aes(x = Weight.kg., fill = Type1)) +
+  geom_histogram(color = "white", binwidth = 10, alpha = 0.8) +
+  scale_fill_manual(values = type_colors) +
+  theme_classic() +
+  labs(
+    title = "Distribution of Pokémon Weight by Primary Type",
+    subtitle = "First Generation Pokémon (in kg)",
+    x = "Weight (kg)",
+    y = "Count"
+  ) +
+  scale_x_continuous(
+    breaks = seq(0, ceiling(max(df$Weight.kg, na.rm = TRUE)), by = 50)
+  )
+```
+
+
+```{r}
+library(dplyr)
+library(ggplot2)
+
+df_clean <- df %>%
+  filter(Type1 != "" & !is.na(Type1))
+
+top_types <- df_clean %>%
+  count(Type1) %>%
+  arrange(desc(n)) %>%
+  slice_head(n = 3) %>%
+  pull(Type1)
+
+df_filtered <- df_clean %>%
+  filter(Type1 %in% top_types)
+
+df_percent <- df_filtered %>%
+  group_by(Type1, Legendary) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  group_by(Type1) %>%
+  mutate(Percent = count / sum(count) * 100) %>%
+  ungroup()
+
+ggplot(data = df_percent, aes(x = Legendary, y = Percent, fill = Legendary)) +
+  geom_bar(stat = "identity", color = "black") +
+  labs(
+    x = "Legendary Status",
+    y = "Percent (%)",
+    title = "Legendary Distribution by Pokemon Type",
+    subtitle = "Top 3 Most Common Primary Types"
+  ) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.1))) +
+  facet_wrap(vars(Type1)) +
+  theme_bw() +
+  guides(fill = "none")
+
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+df_clean <- df %>%
+  filter(Type1 != "" & !is.na(Type1))
+
+top_types <- df_clean %>%
+  count(Type1) %>%
+  arrange(desc(n)) %>%
+  slice_head(n = 6) %>%
+  pull(Type1)
+
+df_filtered <- df_clean %>%
+  filter(Type1 %in% top_types)
+
+df_percent <- df_filtered %>%
+  group_by(Type1, Type2) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  group_by(Type1) %>%
+  mutate(Percent = count / sum(count) * 100) %>%
+  ungroup()
+
+# Plot
+ggplot(data = df_percent, aes(x = Type2, y = Percent, fill = Type2)) +
+  geom_bar(stat = "identity", color = "black") +
+  labs(
+    x = "Secondary Type (Type2)",
+    y = "Percent (%)",
+    title = "Secondary Type Distribution by Primary Type",
+    subtitle = "Top 3 Most Common Primary Pokemon Types"
+  ) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.1))) +
+  facet_wrap(vars(Type1)) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  guides(fill = "none")
+
+```
+
+```{r}
+library(dplyr)
+library(ggplot2)
+
+df_clean <- df %>%
+  filter(Type1 != "" & !is.na(Type1))
+
+top_types <- df_clean %>%
+  count(Type1) %>%
+  arrange(desc(n)) %>%
+  slice_head(n = 3) %>%
+  pull(Type1)
+
+selected_types <- union(top_types, "Dragon")
+
+df_filtered <- df_clean %>%
+  filter(Type1 %in% selected_types)
+
+max_height <- max(df_filtered$Height.m., na.rm = TRUE)
+
+type_colors_filtered <- type_colors[names(type_colors) %in% selected_types]
+
+ggplot(data = df_filtered, aes(x = Height.m.)) +
+  geom_density(aes(fill = Type1), alpha = 0.7, adjust = 1.5) +
+  scale_fill_manual(values = type_colors_filtered) +
+  scale_x_continuous(limits = c(0, max_height + 5), expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0)) +
+  labs(
+    x = "Height (m)",
+    y = NULL,
+    title = "Distribution of Pokemon Heights by Primary Type",
+    subtitle = "Top 3 Most Common Primary Types + Dragon",
+    fill = "Primary Type"
+  ) +
+  theme_classic() +
+  theme(
+    axis.text.y = element_blank(),
+    axis.ticks.y = element_blank(),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor.y = element_blank()
+  )
+
+```
+
