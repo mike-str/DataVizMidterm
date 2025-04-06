@@ -1,0 +1,190 @@
+---
+title: "Midterm"
+author: "Michael Strohmeier"
+date: "2025-04-05"
+output: pdf_document
+---
+
+```{r}
+if (!requireNamespace("ggplot2", quietly=TRUE)) {
+  install.packages("ggplot2")
+}
+
+if (!requireNamespace("dplyr", quietly=TRUE)) {
+  install.packages("dplyr")
+}
+
+if (!requireNamespace("tidyr", quietly=TRUE)) {
+  install.packages("tidyr")
+}
+
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(stringr)
+```
+
+```{r}
+df <- read.csv("FirstGenPokemon.csv")
+
+df <- df %>%
+  mutate(
+    Type1 = str_to_title(Type1),
+    Type2 = str_to_title(Type2)
+  )
+
+df <- df %>%
+  rename(
+    weight_kg = Weight.kg.,
+    height_m = Height.m.
+  )
+
+head(df, 2)
+```
+
+1. A chart that shows the distribution of a single quantitative variable
+```{r}
+ggplot(df, aes(x = weight_kg)) +
+  geom_histogram(binwidth = 40, fill = "grey", color = "black", boundary = 0) +
+  scale_x_continuous(breaks = seq(0, max(df$weight_kg, na.rm = TRUE), by = 40)) +
+  scale_y_continuous(breaks = seq(0, 100, by = 25), limits = c(0, 100), expand = c(0, 0)) +
+  labs(
+    title = "Distribution of Pokemon Weight",
+    subtitle = "Original 151 Pokemon Weight (kg)",
+    x = "Weight (kg)",
+    y = "Count"
+  ) +
+  theme_classic() +
+  theme(plot.margin = margin(0, 10, 0, 10))
+
+```
+
+```{r}
+df_over_440 <- df %>%
+  filter(weight_kg > 200)
+
+df_over_440
+```
+
+```{r}
+df <- df %>%
+  mutate(weight_class = case_when(
+    weight_kg >= 0 & weight_kg < 40   ~ "Light",
+    weight_kg >= 40 & weight_kg <= 80 ~ "Medium",
+    weight_kg > 80                    ~ "Heavy"
+  ))
+
+df <- df %>%
+  mutate(weight_class = factor(weight_class, levels = c("Heavy", "Medium", "Light")))
+
+head(df, 2)
+```
+
+2. A chart that shows the distribution of a single categorical variable
+```{r}
+ggplot(df, aes(x = weight_class)) +
+  geom_bar(fill = "steelblue", color = "black") +
+  coord_flip() +
+  
+  scale_y_continuous(breaks = seq(0, 100, by = 25), limits = c(0, 100), expand = c(0, 0)) +  # y-axis ticks
+  labs(
+    title = "Count of Weight Classes",
+    subtitle = "a",
+    x = NULL,
+    y = "Count"
+  ) +
+  theme_classic() +
+  theme(plot.margin = margin(t = 10, r = 20, b = 10, l = 10))
+```
+
+```{r}
+library(ggplot2)
+library(dplyr)
+
+type_colors <- setNames(
+  c(
+    "#4DAF4A",  # Grass
+    "#E41A1C",  # Fire
+    "#377EB8",  # Water
+    "#A6CE39",  # Bug
+    "#AAAAAA",  # Normal
+    "#800080",  # Poison
+    "#FFD700",  # Electric
+    "#D2B48C",  # Ground
+    "#FF7F00",  # Fighting
+    "#F4A7B9",  # Psychic
+    "#888888",  # Rock
+    "#984EA3",  # Ghost
+    "#56B4E9",  # Ice
+    "#8DA0CB"   # Dragon
+  ),
+  c("Grass", "Fire", "Water", "Bug", "Normal", "Poison", "Electric",
+    "Ground", "Fighting", "Psychic", "Rock", "Ghost", "Ice", "Dragon")
+)
+
+ggplot(df, aes(x = weight_class, fill = Type1)) +
+  geom_bar(color = "black") +
+  coord_flip() +
+  scale_y_continuous(
+    breaks = seq(0, 100, by = 25),
+    limits = c(0, 100),
+    expand = c(0, 0)
+  ) +
+  scale_fill_manual(values = type_colors) +
+  labs(
+    title = "Count of Weight Classes",
+    subtitle = "Stacked by Primary Pokémon Type",
+    x = NULL,
+    y = "Count",
+    fill = "Type"
+  ) +
+  theme_classic() +
+  theme(
+    plot.margin = margin(t = 10, r = 20, b = 10, l = 10)
+  )
+
+```
+
+```{r}
+library(ggplot2)
+library(dplyr)
+
+df_pct <- df %>%
+  group_by(Type1, weight_class) %>%
+  summarise(n = n(), .groups = "drop") %>%
+  group_by(Type1) %>%
+  mutate(pct = n / sum(n) * 100)
+
+ggplot(df_pct, aes(x = Type1, y = pct, fill = weight_class)) +
+  geom_bar(stat = "identity", position = "stack", color = "black") +
+  scale_fill_manual(values = c("light" = "#4DAF4A", "medium" = "#FFD700", "heavy" = "#E41A1C")) +
+  labs(
+    title = "Weight Class Distribution per Type",
+    subtitle = "Percent of Pokémon in each weight class, grouped by Type1",
+    x = "Primary Type",
+    y = "Percent",
+    fill = "Weight Class"
+  ) +
+  scale_y_continuous(
+    labels = scales::percent_format(scale = 1),
+    limits = c(0, 100),
+    expand = c(0, 0)
+  ) +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+```
+```{r}
+df_avg_weight <- df %>%
+  group_by(Type1) %>%
+  summarise(
+    average_weight = mean(weight_kg, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  arrange(desc(average_weight))
+
+df_avg_weight
+
+```
+
