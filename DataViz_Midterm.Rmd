@@ -61,9 +61,30 @@ ggplot(df, aes(x = weight_kg)) +
 
 ```{r}
 df_over_440 <- df %>%
-  filter(weight_kg > 200)
+  filter(weight_kg > 200) %>%
+  arrange(desc(weight_kg)) %>%
+  rename(Primary_Type = Type1) %>%
+  select(Name, Primary_Type, weight_kg)
 
 df_over_440
+```
+
+```{r}
+df_avg_weight <- df %>%
+  group_by(Type1) %>%
+  summarise(
+    average_weight = round(mean(weight_kg, na.rm = TRUE), 1),
+    .groups = "drop"
+  ) %>%
+  arrange(desc(average_weight)) %>%
+  rename(
+    `Primary Type` = Type1,
+    `Avg Weight (kg)` = average_weight
+  )
+
+# View the result
+View(df_avg_weight)
+
 ```
 
 ```{r}
@@ -82,19 +103,22 @@ head(df, 2)
 
 2. A chart that shows the distribution of a single categorical variable
 ```{r}
+
 ggplot(df, aes(x = weight_class)) +
   geom_bar(fill = "steelblue", color = "black") +
   coord_flip() +
-  
-  scale_y_continuous(breaks = seq(0, 100, by = 25), limits = c(0, 100), expand = c(0, 0)) +  # y-axis ticks
+  scale_y_continuous(breaks = seq(0, 100, by = 25), limits = c(0, 100), expand = c(0, 0)) +
   labs(
-    title = "Count of Weight Classes",
-    subtitle = "a",
+    title = "Distribution of Pokemon Weight Classes",
+    subtitle = "Custom Weight Classes",
     x = NULL,
-    y = "Count"
+    y = "Count",
+    caption = "Light: 0–40 kg   |   Medium: 40–80 kg   |   Heavy: 80+ kg"
   ) +
   theme_classic() +
-  theme(plot.margin = margin(t = 10, r = 20, b = 10, l = 10))
+  theme(plot.margin = margin(t = 10, r = 20, b = 10, l = 10),
+        plot.caption = element_text(hjust = 0.5, size = 9))
+
 ```
 
 ```{r}
@@ -132,37 +156,40 @@ ggplot(df, aes(x = weight_class, fill = Type1)) +
   ) +
   scale_fill_manual(values = type_colors) +
   labs(
-    title = "Count of Weight Classes",
-    subtitle = "Stacked by Primary Pokémon Type",
+    title = "Distribution of Pokemon Weight Classes",
+    subtitle = "Custom Weight Classes",
     x = NULL,
     y = "Count",
+    caption = "Light: 0–40 kg   |   Medium: 40–80 kg   |   Heavy: 80+ kg",
     fill = "Type"
   ) +
   theme_classic() +
   theme(
-    plot.margin = margin(t = 10, r = 20, b = 10, l = 10)
+    plot.margin = margin(t = 10, r = 20, b = 10, l = 10),
+    plot.caption = element_text(hjust = 0.5, size = 9)
   )
 
 ```
 
 ```{r}
-library(ggplot2)
-library(dplyr)
+df_pct_filtered <- df_pct %>%
+  filter(Type1 %in% c("Ghost", "Rock")) %>%
+  mutate(
+    weight_class = factor(weight_class, levels = c("Heavy", "Medium", "Light")),
+    Type1 = factor(Type1, levels = c("Ghost", "Rock"))  # set x-axis order
+  )
 
-df_pct <- df %>%
-  group_by(Type1, weight_class) %>%
-  summarise(n = n(), .groups = "drop") %>%
-  group_by(Type1) %>%
-  mutate(pct = n / sum(n) * 100)
-
-ggplot(df_pct, aes(x = Type1, y = pct, fill = weight_class)) +
+ggplot(df_pct_filtered, aes(x = Type1, y = pct, fill = weight_class)) +
   geom_bar(stat = "identity", position = "stack", color = "black") +
-  scale_fill_manual(values = c("light" = "#4DAF4A", "medium" = "#FFD700", "heavy" = "#E41A1C")) +
+  scale_fill_manual(
+    values = c("Light" = "#4DAF4A", "Medium" = "#FFD700", "Heavy" = "#E41A1C"),
+    breaks = c("Light", "Medium", "Heavy")
+  ) +
   labs(
-    title = "Weight Class Distribution per Type",
-    subtitle = "Percent of Pokémon in each weight class, grouped by Type1",
+    title = "Weight Class Distribution",
+    subtitle = "Ghost and Rock Types",
     x = "Primary Type",
-    y = "Percent",
+    y = NULL,
     fill = "Weight Class"
   ) +
   scale_y_continuous(
@@ -171,20 +198,127 @@ ggplot(df_pct, aes(x = Type1, y = pct, fill = weight_class)) +
     expand = c(0, 0)
   ) +
   theme_classic() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  theme(axis.text.x = element_text(angle = 0, hjust = 0.5))
 
 
 ```
-```{r}
-df_avg_weight <- df %>%
-  group_by(Type1) %>%
-  summarise(
-    average_weight = mean(weight_kg, na.rm = TRUE),
-    .groups = "drop"
-  ) %>%
-  arrange(desc(average_weight))
 
-df_avg_weight
+```{r}
+df_filtered <- df %>%
+  filter(Type1 %in% c("Rock", "Ghost") & !is.na(weight_kg)) %>%
+  mutate(Type1 = factor(Type1, levels = c("Ghost", "Rock")))
+
+# Separate by type
+df_rock  <- df_filtered %>% filter(Type1 == "Rock")
+df_ghost <- df_filtered %>% filter(Type1 == "Ghost")
+
+# Plot
+ggplot() +
+  geom_density(
+    data = df_rock,
+    aes(x = weight_kg, fill = Type1),
+    alpha = 0.7,
+    adjust = 1.5,
+    color = "black"
+  ) +
+  geom_density(
+    data = df_ghost,
+    aes(x = weight_kg, fill = Type1),
+    alpha = 0.7,
+    adjust = 1.5,
+    color = "black"
+  ) +
+  scale_fill_manual(
+    values = type_colors[c("Ghost", "Rock")],
+    breaks = c("Ghost", "Rock")
+  ) +
+  scale_x_continuous(
+    limits = c(0, max(df_filtered$weight_kg, na.rm = TRUE) + 125),
+    expand = c(0, 0)
+  ) +
+  
+  scale_y_continuous(expand = c(0, 0)) +
+  labs(
+    x = "Weight (kg)",
+    y = NULL,
+    title = "Distribution of Pokemon Weights by Primary Type",
+    subtitle = "Rock and Ghost Types",
+    fill = "Primary Type"
+  ) +
+  theme_classic() +
+  theme(
+    axis.text.y = element_blank(),
+    axis.ticks.y = element_blank(),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor.y = element_blank()
+  )
+
+```
+
+```{r}
+df_filtered <- df %>%
+  filter(Type1 %in% c("Ghost", "Rock") & !is.na(weight_kg) & !is.na(height_m)) %>%
+  mutate(Type1 = factor(Type1, levels = c("Ghost", "Rock")))
+
+ggplot(df_filtered, aes(x = weight_kg, y = height_m, color = Type1)) +
+  geom_point(alpha = 0.7, size = 2) +
+  scale_color_manual(
+    values = type_colors[c("Ghost", "Rock")],
+    breaks = c("Ghost", "Rock")
+  ) +
+  scale_y_continuous(limits = c(0, 9), breaks = seq(0, 9, by = 3)) +
+  labs(
+    title = "Relationship Between Pokémon Weight and Height",
+    subtitle = "Ghost and Rock Types",
+    x = "Weight (kg)",
+    y = "Height (m)",
+    color = "Primary Type"
+  ) +
+  theme_classic()
+
+
+```
+
+```{r}
+df %>%
+  filter(Type1 == "Rock" & !is.na(height_m)) %>%
+  arrange(desc(height_m)) %>%
+  slice_head(n = 1) %>%
+  select(Name, Type1, height_m, weight_kg)
+
+```
+
+```{r}
+df_filtered <- df %>%
+  filter(
+    Type1 %in% c("Ghost", "Rock"),
+    !is.na(weight_kg),
+    !is.na(height_m),
+    Name != "Onix"
+  ) %>%
+  mutate(Type1 = factor(Type1, levels = c("Ghost", "Rock")))
+
+ggplot(df_filtered, aes(x = weight_kg, y = height_m, color = Type1)) +
+  geom_point(alpha = 0.7, size = 2) +
+  geom_smooth(method = "lm", se = FALSE, size = 1, fullrange = TRUE) +
+  scale_color_manual(
+    values = type_colors[c("Ghost", "Rock")],
+    breaks = c("Ghost", "Rock")
+  ) +
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(
+    limits = c(0, 9),
+    breaks = seq(0, 9, by = 3),
+    expand = c(0, 0)
+  ) +
+  labs(
+    title = "Relationship Between Pokémon Weight and Height",
+    subtitle = "Ghost and Rock Types (Onix Removed)",
+    x = "Weight (kg)",
+    y = "Height (m)",
+    color = "Primary Type"
+  ) +
+  theme_classic()
 
 ```
 
