@@ -18,6 +18,10 @@ if (!requireNamespace("tidyr", quietly=TRUE)) {
   install.packages("tidyr")
 }
 
+if (!requireNamespace("stringr", quietly=TRUE)) {
+  install.packages("stringr")
+}
+
 library(ggplot2)
 library(dplyr)
 library(tidyr)
@@ -256,36 +260,37 @@ ggplot() +
 ```
 
 ```{r}
-df_filtered <- df %>%
-  filter(Type1 %in% c("Ghost", "Rock") & !is.na(weight_kg) & !is.na(height_m)) %>%
-  mutate(Type1 = factor(Type1, levels = c("Ghost", "Rock")))
-
-ggplot(df_filtered, aes(x = weight_kg, y = height_m, color = Type1)) +
+ggplot(df_filtered, aes(x = height_m, y = weight_kg, color = Type1)) +
   geom_point(alpha = 0.7, size = 2) +
   scale_color_manual(
     values = type_colors[c("Ghost", "Rock")],
     breaks = c("Ghost", "Rock")
   ) +
-  scale_y_continuous(limits = c(0, 9), breaks = seq(0, 9, by = 3)) +
+  scale_x_continuous(limits = c(0, 9), breaks = seq(0, 9, by = 3)) +
   labs(
-    title = "Relationship Between Pokémon Weight and Height",
+    title = "Relationship Between Pokémon Height and Weight",
     subtitle = "Ghost and Rock Types",
-    x = "Weight (kg)",
-    y = "Height (m)",
+    x = "Height (m)",
+    y = "Weight (kg)",
     color = "Primary Type"
   ) +
   theme_classic()
-
-
 ```
 
 ```{r}
 df %>%
-  filter(Type1 == "Rock" & !is.na(height_m)) %>%
-  arrange(desc(height_m)) %>%
+  filter(Type1 == "Rock" & !is.na(weight_kg)) %>%
+  arrange(desc(weight_kg)) %>%
   slice_head(n = 1) %>%
   select(Name, Type1, height_m, weight_kg)
 
+```
+
+```{r}
+df_ghost <- df %>%
+  filter(Type1 == "Ghost")
+
+df_ghost
 ```
 
 ```{r}
@@ -293,32 +298,125 @@ df_filtered <- df %>%
   filter(
     Type1 %in% c("Ghost", "Rock"),
     !is.na(weight_kg),
-    !is.na(height_m),
-    Name != "Onix"
+    !is.na(height_m)
   ) %>%
   mutate(Type1 = factor(Type1, levels = c("Ghost", "Rock")))
 
-ggplot(df_filtered, aes(x = weight_kg, y = height_m, color = Type1)) +
+max_rock_height <- df_filtered %>%
+  filter(Type1 == "Rock") %>%
+  summarise(max_height = max(height_m)) %>%
+  pull(max_height)
+
+prediction_data <- df_filtered %>%
+  group_split(Type1) %>%
+  map_df(~ {
+    model <- lm(weight_kg ~ height_m, data = .x)
+    data.frame(
+      height_m = seq(0, max_rock_height, length.out = 100),
+      weight_kg = predict(model, newdata = data.frame(height_m = seq(0, max_rock_height, length.out = 100))),
+      Type1 = unique(.x$Type1)
+    )
+  })
+
+ggplot(df_filtered, aes(x = height_m, y = weight_kg, color = Type1)) +
   geom_point(alpha = 0.7, size = 2) +
-  geom_smooth(method = "lm", se = FALSE, size = 1, fullrange = TRUE) +
+  geom_line(data = prediction_data, size = 1) +
   scale_color_manual(
     values = type_colors[c("Ghost", "Rock")],
     breaks = c("Ghost", "Rock")
   ) +
-  scale_x_continuous(expand = c(0, 0)) +
-  scale_y_continuous(
-    limits = c(0, 9),
-    breaks = seq(0, 9, by = 3),
-    expand = c(0, 0)
-  ) +
+  scale_x_continuous(limits = c(0, 9), breaks = seq(0, 9, by = 3), expand = c(0, 0)) +
+  scale_y_continuous(limits = c(-5, 305), expand = c(0, 0)) +
   labs(
-    title = "Relationship Between Pokémon Weight and Height",
-    subtitle = "Ghost and Rock Types (Onix Removed)",
-    x = "Weight (kg)",
-    y = "Height (m)",
+    title = "Relationship Between Pokemon Height and Weight",
+    subtitle = "Ghost and Rock Types",
+    x = "Height (m)",
+    y = "Weight (kg)",
     color = "Primary Type"
   ) +
   theme_classic()
+
+```
+
+
+```{r}
+df_filtered <- df %>%
+  filter(
+    Type1 %in% c("Ghost", "Rock"),
+    !is.na(weight_kg),
+    !is.na(height_m),
+    !Name %in% c("Golem", "Gengar")  # removes both
+  ) %>%
+  mutate(Type1 = factor(Type1, levels = c("Ghost", "Rock")))
+
+max_rock_height <- df_filtered %>%
+  filter(Type1 == "Rock") %>%
+  summarise(max_height = max(height_m)) %>%
+  pull(max_height)
+
+prediction_data <- df_filtered %>%
+  group_split(Type1) %>%
+  map_df(~ {
+    model <- lm(weight_kg ~ height_m, data = .x)
+    data.frame(
+      height_m = seq(0, max_rock_height, length.out = 100),
+      weight_kg = predict(model, newdata = data.frame(height_m = seq(0, max_rock_height, length.out = 100))),
+      Type1 = unique(.x$Type1)
+    )
+  })
+
+ggplot(df_filtered, aes(x = height_m, y = weight_kg, color = Type1)) +
+  geom_point(alpha = 0.7, size = 2) +
+  geom_line(data = prediction_data, size = 1) +
+  scale_color_manual(
+    values = type_colors[c("Ghost", "Rock")],
+    breaks = c("Ghost", "Rock")
+  ) +
+  scale_x_continuous(limits = c(0, 9), breaks = seq(0, 9, by = 3), expand = c(0, 0)) +
+  scale_y_continuous(limits = c(-5, 305), expand = c(0, 0)) +
+  labs(
+    title = "Relationship Between Pokemon Height and Weight",
+    subtitle = "Ghost and Rock Types (Golem and Gengar Removed)",
+    x = "Height (m)",
+    y = "Weight (kg)",
+    color = "Primary Type"
+  ) +
+  theme_classic()
+```
+
+```{r}
+df_renamed <- df %>%
+  select(Height = height_m, Weight = weight_kg, Attack, Speed)
+
+cor_matrix <- cor(df_renamed, use = "complete.obs") %>%
+  as.data.frame()
+
+cor_matrix$Var1 <- rownames(cor_matrix)
+
+cor_long <- cor_matrix %>%
+  pivot_longer(
+    cols = -Var1,
+    names_to = "Var2",
+    values_to = "value"
+  )
+
+ggplot(cor_long, aes(x = Var1, y = Var2, fill = value)) +
+  geom_tile(color = "white") +
+  scale_fill_gradient2(
+    low = "blue", mid = "white", high = "red",
+    midpoint = 0, limit = c(-1, 1), space = "Lab",
+    name = "Correlation"
+  ) +
+  labs(
+    title = "Pokemon Attributes Correlation Heatmap",
+    subtitle = "Height, Weight, Attack, and Speed",
+    x = "",
+    y = ""
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)
+  )
 
 ```
 
