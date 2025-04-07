@@ -1,0 +1,26 @@
+2)
+Let's start by looking at the overall distribution of Pokémon weights. The data is strongly right-skewed, meaning most Pokémon are relatively light. The median weight of Pokémon is 30. There are some notable outliers.
+
+3)
+Pokémon can be further divided into weight classes: Light, Medium, and Heavy. The Light class is the most common at 95 observations. The Heavy class is the smallest group, with only 22 Pokémon.
+
+5)
+Pokémon with Ghost and Rock primary types have the lightest and heaviest mean weights respectively. 66% of Ghost type Pokémon are light and none are heavy. In contrast Rock type Pokémon are a bit more evenly distributed in weight classes.
+
+6)
+Comparing Ghost and Rock type Pokémon Ghost types much lighter on average.
+They have a mean of 13.57 kg and have a clear peak near 0 kg.
+Rock types have a mean of 87.61 kg and have a clear peak near 40 kg.
+Rock types are a lot more heavy on average and the weight is more varied.
+
+9) 
+We are looking at the relationship between height and weight.To better visualize this, we removed major outliers like Golem and Gengar, which would otherwise drastically skew the trend.
+
+For Ghost-types their weight stays fairly constant regardless of height.
+
+For Rock-type Pokémon, there’s a strong positive linear trend—as height increases, weight does too.
+
+10)
+This is a correlation matrix of Attach, Height, Weight, and Speed for all Pokémon. 
+Height and weight have a strong correlation at 0.57
+Speed and weight are not highly correlated, so speed can't be predicted by weight alone.
