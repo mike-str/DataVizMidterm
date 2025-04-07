@@ -46,6 +46,10 @@ df <- df %>%
 head(df, 2)
 ```
 
+```{r}
+summary(df$weight_kg)
+```
+
 1. A chart that shows the distribution of a single quantitative variable
 ```{r}
 ggplot(df, aes(x = weight_kg)) +
@@ -123,6 +127,10 @@ ggplot(df, aes(x = weight_class)) +
   theme(plot.margin = margin(t = 10, r = 20, b = 10, l = 10),
         plot.caption = element_text(hjust = 0.5, size = 9))
 
+```
+
+```{r}
+summary(df$weight_class)
 ```
 
 ```{r}
@@ -204,6 +212,21 @@ ggplot(df_pct_filtered, aes(x = Type1, y = pct, fill = weight_class)) +
   theme_classic() +
   theme(axis.text.x = element_text(angle = 0, hjust = 0.5))
 
+
+```
+
+```{r}
+df %>%
+  filter(Type1 %in% c("Rock", "Ghost")) %>%
+  group_by(Type1) %>%
+  summarise(
+    count = n(),
+    mean_weight = mean(weight_kg, na.rm = TRUE),
+    median_weight = median(weight_kg, na.rm = TRUE),
+    min_weight = min(weight_kg, na.rm = TRUE),
+    max_weight = max(weight_kg, na.rm = TRUE),
+    sd_weight = sd(weight_kg, na.rm = TRUE)
+  )
 
 ```
 
@@ -402,6 +425,7 @@ cor_long <- cor_matrix %>%
 
 ggplot(cor_long, aes(x = Var1, y = Var2, fill = value)) +
   geom_tile(color = "white") +
+  geom_text(aes(label = round(value, 2)), color = "black", size = 4) +
   scale_fill_gradient2(
     low = "blue", mid = "white", high = "red",
     midpoint = 0, limit = c(-1, 1), space = "Lab",
